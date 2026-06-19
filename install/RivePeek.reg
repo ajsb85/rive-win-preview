@@ -26,7 +26,6 @@ Windows Registry Editor Version 5.00
 
 [HKEY_CURRENT_USER\SOFTWARE\Classes\.riv]
 @="RivePeek.Document"
-"PerceivedType"="image"
 
 [HKEY_CURRENT_USER\SOFTWARE\Classes\.riv\ShellEx\{8895b1c6-b41f-4c1c-a562-0d564250836f}]
 @="{7B2E9C14-5F3A-4D6B-9E21-3C8A7F0D5B42}"

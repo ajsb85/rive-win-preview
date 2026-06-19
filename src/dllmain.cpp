@@ -107,8 +107,10 @@ STDAPI DllRegisterServer() {
         {L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR L"\\InprocServer32", nullptr, module},
         {L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR L"\\InprocServer32", L"ThreadingModel", L"Apartment"},
         // Associate the .riv extension with the preview-handler shell extension.
+        // NOTE: deliberately NO PerceivedType — setting "image" makes the Shell
+        // route .riv to the built-in image thumbnail/preview handlers (which
+        // can't decode a .riv and show a generic picture icon) instead of ours.
         {L"Software\\Classes\\.riv", nullptr, L"RivePeek.Document"},
-        {L"Software\\Classes\\.riv", L"PerceivedType", L"image"},
         {L"Software\\Classes\\.riv\\ShellEx\\" SHELLEX_PREVIEWHANDLER_STR, nullptr, RIVEPEEK_CLSID_STR},
         {L"Software\\Classes\\RivePeek.Document", nullptr, L"Rive Animation"},
         {L"Software\\Classes\\RivePeek.Document\\ShellEx\\" SHELLEX_PREVIEWHANDLER_STR, nullptr, RIVEPEEK_CLSID_STR},
@@ -127,8 +129,9 @@ STDAPI DllRegisterServer() {
 
 STDAPI DllUnregisterServer() {
     RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR);
-    RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Classes\\.riv\\ShellEx\\"
-                   SHELLEX_PREVIEWHANDLER_STR);
+    // Remove our per-user .riv class entirely (default ProgID, ShellEx, and any
+    // PerceivedType written by older builds).
+    RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Classes\\.riv");
     RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Classes\\RivePeek.Document");
 
     HKEY key;
