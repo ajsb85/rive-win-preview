@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" font-family="system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif" role="img" aria-label="How a .riv preview renders: explorer.exe hands the file to RivePeek inside the prevhost.exe surrogate, which imports the Rive file and renders it with Direct2D.">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6e7681"/>
+    </marker>
+    <style>
+      .lbl  { fill:#e6edf3; font-size:14px; font-weight:600; }
+      .sub  { fill:#9aa4b2; font-size:11px; }
+      .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+      .proc { font-size:15px; font-weight:700; }
+      .edge { stroke:#6e7681; stroke-width:1.6; fill:none; }
+      text  { text-anchor:middle; }
+      .start{ text-anchor:start; }   /* class beats the element rule above */
+    </style>
+  </defs>
+
+  <rect width="900" height="620" fill="#0d1117"/>
+  <rect x="6" y="6" width="888" height="608" rx="12" fill="none" stroke="#21262d" stroke-width="1.5"/>
+
+  <!-- title -->
+  <text x="28" y="38" class="lbl start" font-size="17">How a <tspan class="mono">.riv</tspan> preview renders<tspan class="sub" font-weight="400">   ·   explorer.exe  →  prevhost.exe surrogate</tspan></text>
+
+  <!-- ===================== explorer.exe (left) ===================== -->
+  <rect x="28" y="80" width="250" height="300" rx="10" fill="none" stroke="#30363d" stroke-width="1.5"/>
+  <text x="44" y="108" class="proc start" fill="#58a6ff">explorer.exe</text>
+
+  <rect x="48" y="124" width="210" height="40" rx="8" fill="#161b22" stroke="#58a6ff" stroke-width="1.6"/>
+  <text x="153" y="149" class="lbl mono">select foo.riv</text>
+
+  <rect x="48" y="196" width="210" height="46" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.4"/>
+  <text x="153" y="223" class="mono lbl" font-size="13">registry → CLSID</text>
+
+  <rect x="48" y="256" width="210" height="46" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.4"/>
+  <text x="153" y="276" class="mono lbl" font-size="13">IStream</text>
+  <text x="153" y="291" class="sub">read-only file bytes</text>
+
+  <rect x="48" y="316" width="210" height="46" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.4"/>
+  <text x="153" y="343" class="mono lbl" font-size="13">HWND + RECT</text>
+
+  <!-- select -> first row -->
+  <path class="edge" marker-end="url(#arrow)" d="M153,164 V192"/>
+
+  <!-- ===================== prevhost.exe (right, isolated) ===================== -->
+  <rect x="360" y="68" width="512" height="512" rx="12" fill="none" stroke="#f0883e" stroke-width="1.7" stroke-dasharray="6 5"/>
+  <text x="378" y="96" class="proc start" fill="#f0883e">prevhost.exe<tspan class="sub" font-weight="400" dx="12">surrogate · isolated host</tspan></text>
+
+  <!-- COM handler stage (blue) -->
+  <rect x="384" y="116" width="472" height="260" rx="9" fill="#161b22" stroke="#58a6ff" stroke-width="1.6"/>
+  <text x="404" y="142" class="sub start">RivePeek.dll — COM handler</text>
+  <text x="404" y="223" class="mono start" fill="#e6edf3" font-size="13">CoCreateInstance(RivePeek)</text>
+  <text x="404" y="283" class="mono start" fill="#e6edf3" font-size="13">IInitializeWithStream::Initialize</text>
+  <text x="404" y="343" class="mono start" fill="#e6edf3" font-size="13">IPreviewHandler::SetWindow / DoPreview</text>
+
+  <!-- three COM hand-offs explorer -> handler -->
+  <path class="edge" marker-end="url(#arrow)" d="M258,219 H382"/>
+  <path class="edge" marker-end="url(#arrow)" d="M258,279 H382"/>
+  <path class="edge" marker-end="url(#arrow)" d="M258,339 H382"/>
+
+  <!-- handler -> import -->
+  <path class="edge" marker-end="url(#arrow)" d="M620,376 V408"/>
+
+  <!-- Rive runtime stage (purple) -->
+  <rect x="420" y="410" width="400" height="68" rx="9" fill="#161b22" stroke="#bc8cff" stroke-width="1.6"/>
+  <text x="620" y="438" class="lbl mono">rive::File::import</text>
+  <text x="620" y="458" class="sub">Rive C++ runtime · artboard + state machine</text>
+
+  <!-- import -> render -->
+  <path class="edge" marker-end="url(#arrow)" d="M620,478 V506"/>
+
+  <!-- Direct2D render stage (green) -->
+  <rect x="420" y="508" width="400" height="68" rx="9" fill="#0e1a12" stroke="#3fb950" stroke-width="1.6"/>
+  <text x="620" y="536" class="mono" fill="#aee6bb" font-size="13" font-weight="600">D2DRenderer → ID2D1HwndRenderTarget</text>
+  <text x="620" y="556" class="sub">paths · gradients · clips · images</text>
+
+  <!-- ===================== legend ===================== -->
+  <g transform="translate(0,2)">
+    <rect x="40"  y="596" width="11" height="11" rx="3" fill="#58a6ff"/><text x="57"  y="605" class="sub start">COM handler</text>
+    <rect x="168" y="596" width="11" height="11" rx="3" fill="#bc8cff"/><text x="185" y="605" class="sub start">Rive runtime</text>
+    <rect x="296" y="596" width="11" height="11" rx="3" fill="#3fb950"/><text x="313" y="605" class="sub start">Direct2D render</text>
+    <rect x="436" y="596" width="11" height="11" rx="3" fill="none" stroke="#f0883e" stroke-dasharray="3 2"/><text x="453" y="605" class="sub start">isolated process</text>
+  </g>
+</svg>

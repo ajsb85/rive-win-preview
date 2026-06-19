@@ -2,6 +2,7 @@
 build/obj/
 build/bin/
 build/thumbs/
+build/release/
 build/*.lib
 build/*.log
 build/*.txt

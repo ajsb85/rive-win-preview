@@ -59,20 +59,10 @@ select a `.riv` file:
    frame with a **Direct2D** renderer into a child window, advancing the default
    state machine (or first animation) on a ~30 fps timer.
 
-```
-explorer.exe                       prevhost.exe (surrogate, isolated)
-  │  select foo.riv                  │
-  │  registry → CLSID ─────────────► │  CoCreateInstance(RivePeek)
-  │  IStream  ──────────────────────►│  IInitializeWithStream::Initialize
-  │  HWND + RECT ───────────────────►│  IPreviewHandler::SetWindow / DoPreview
-  │                                  │      │
-  │                                  │      ▼
-  │                                  │  rive::File::import  (Rive C++ runtime)
-  │                                  │      │  artboard + state machine
-  │                                  │      ▼
-  │                                  │  D2DRenderer ──► ID2D1HwndRenderTarget
-  │                                  │      (paths, gradients, clips, images)
-```
+<p align="center">
+  <img src="docs/architecture-dark.svg" width="820"
+       alt="Pipeline: explorer.exe hands foo.riv to RivePeek inside the isolated prevhost.exe surrogate via CoCreateInstance, IInitializeWithStream::Initialize and IPreviewHandler::SetWindow/DoPreview; RivePeek imports the file with the Rive C++ runtime and renders it with a Direct2D renderer into an ID2D1HwndRenderTarget.">
+</p>
 
 ### The Direct2D backend
 
