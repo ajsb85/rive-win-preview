@@ -131,9 +131,10 @@ int wmain(int argc, wchar_t** argv) {
     if (FAILED(hr)) { wprintf(L"FAIL: DoPreview 0x%08lx\n", hr); return 1; }
     wprintf(L"ok: DoPreview\n");
 
-    HWND child = nullptr;
-    oleWin->GetWindow(&child);
-    wprintf(L"ok: preview HWND = %p\n", (void*)child);
+    HWND owner = nullptr;
+    oleWin->GetWindow(&owner); // returns the host parent (per the MS sample)
+    HWND child = FindWindowExW(owner, nullptr, L"RivePeekPreviewWindow", nullptr);
+    wprintf(L"ok: IOleWindow::GetWindow=%p  preview child=%p\n", (void*)owner, (void*)child);
 
     pump(900); // let the animation timer run a few frames
 

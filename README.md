@@ -125,22 +125,24 @@ Individual steps: `build_rive_core.bat` (the `rive_core.lib` static lib),
 ## Installing
 
 Registration writes the COM class, the `.riv` association, and the
-approved-preview-handlers entry under `HKEY_LOCAL_MACHINE`, so it needs
-administrator rights. The script self-elevates:
+approved-preview-handlers entry under `HKEY_CURRENT_USER\Software\Classes` —
+**per-user, so no administrator rights are required** (the same scheme
+Microsoft's own preview-handler sample uses).
 
 ```powershell
-# install (UAC prompt)
+# install
 install\register.ps1
 
 # uninstall
 install\unregister.ps1
 ```
 
-Equivalent manual route: `regsvr32 build\bin\RivePeek.dll` from an elevated
-prompt, or edit + merge `install\RivePeek.reg`.
+Equivalent manual routes: `regsvr32 build\bin\RivePeek.dll`, or edit + merge
+`install\RivePeek.reg`.
 
 After installing, open Explorer, enable the preview pane (**Alt + P**) and click
-a `.riv` file.
+a `.riv` file. The handler is loaded by the native 64-bit
+`prevhost.exe` surrogate (AppID `{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}`).
 
 ---
 
@@ -184,4 +186,8 @@ every required interface → `IInitializeWithStream::Initialize` → `SetWindow`
 
 - Built on the [Rive C++ runtime](https://github.com/rive-app/rive-runtime)
   (MIT), included as a submodule.
+- COM preview-handler structure (interface set, `QISearch` dispatch, per-user
+  `HKCU` registration, prevhost surrogate AppID) follows Microsoft's canonical
+  [`RecipePreviewHandler`](https://github.com/microsoft/Windows-classic-samples/tree/main/Samples/Win7Samples/winui/shell/appshellintegration/RecipePreviewHandler)
+  sample.
 - RivePeek itself is MIT licensed — see [`LICENSE`](LICENSE).

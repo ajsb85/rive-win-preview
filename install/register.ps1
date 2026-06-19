@@ -3,10 +3,9 @@
   Register the RivePeek preview handler so Windows Explorer previews .riv files.
 
 .DESCRIPTION
-  Runs regsvr32 against RivePeek.dll, which calls DllRegisterServer to write the
-  COM class, the .riv association, and the approved-preview-handlers entry under
-  HKEY_LOCAL_MACHINE. That requires administrator rights, so this script
-  self-elevates if needed.
+  Runs regsvr32 against RivePeek.dll, which calls DllRegisterServer. Registration
+  is written under HKEY_CURRENT_USER\Software\Classes (the same scheme Microsoft's
+  RecipePreviewHandler sample uses), so NO administrator rights are required.
 
 .PARAMETER Dll
   Path to RivePeek.dll. Defaults to ..\build\bin\RivePeek.dll relative to this script.
@@ -18,23 +17,8 @@ param(
 $ErrorActionPreference = "Stop"
 $Dll = (Resolve-Path $Dll).Path
 
-function Test-Admin {
-    $id = [Security.Principal.WindowsIdentity]::GetCurrent()
-    (New-Object Security.Principal.WindowsPrincipal($id)).IsInRole(
-        [Security.Principal.WindowsBuiltinRole]::Administrator)
-}
-
-if (-not (Test-Admin)) {
-    Write-Host "Elevating to administrator..."
-    Start-Process -FilePath "powershell.exe" -Verb RunAs -ArgumentList @(
-        "-NoProfile", "-ExecutionPolicy", "Bypass",
-        "-File", "`"$PSCommandPath`"", "-Dll", "`"$Dll`""
-    )
-    return
-}
-
-Write-Host "Registering $Dll ..."
-$p = Start-Process regsvr32.exe -ArgumentList "/s `"$Dll`"" -Wait -PassThru
+Write-Host "Registering $Dll (per-user, no elevation needed)..."
+$p = Start-Process "$env:WINDIR\System32\regsvr32.exe" -ArgumentList "/s `"$Dll`"" -Wait -PassThru
 if ($p.ExitCode -ne 0) {
     Write-Error "regsvr32 failed with exit code $($p.ExitCode)"
     exit $p.ExitCode

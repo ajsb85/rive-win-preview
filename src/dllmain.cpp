@@ -73,66 +73,66 @@ STDAPI DllCanUnloadNow() {
 }
 
 // --------------------------------------------------------------- registration
-static LONG setString(HKEY root, const wchar_t* subkey, const wchar_t* name,
-                      const wchar_t* value) {
+//
+// Everything is registered under HKEY_CURRENT_USER\Software\Classes, exactly as
+// Microsoft's RecipePreviewHandler sample does. Per-user registration needs no
+// administrator rights, and the per-user approved-handlers list is honored by
+// the Shell.
+static HRESULT setString(const wchar_t* subkey, const wchar_t* name,
+                         const wchar_t* value) {
     HKEY key;
-    LONG r = RegCreateKeyExW(root, subkey, 0, nullptr, 0, KEY_WRITE, nullptr,
+    LONG r = RegCreateKeyExW(HKEY_CURRENT_USER, subkey, 0, nullptr,
+                             REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr,
                              &key, nullptr);
-    if (r != ERROR_SUCCESS) return r;
+    if (r != ERROR_SUCCESS) return HRESULT_FROM_WIN32(r);
     r = RegSetValueExW(key, name, 0, REG_SZ,
                        reinterpret_cast<const BYTE*>(value),
                        (DWORD)((wcslen(value) + 1) * sizeof(wchar_t)));
     RegCloseKey(key);
-    return r;
+    return HRESULT_FROM_WIN32(r);
 }
+
+struct RegEntry { const wchar_t* subkey; const wchar_t* name; const wchar_t* data; };
 
 STDAPI DllRegisterServer() {
     wchar_t module[MAX_PATH];
     if (!GetModuleFileNameW(g_hInst, module, MAX_PATH))
         return HRESULT_FROM_WIN32(GetLastError());
 
-    const HKEY root = HKEY_LOCAL_MACHINE;
+    const RegEntry entries[] = {
+        // COM class.
+        {L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR, nullptr, RIVEPEEK_FRIENDLY_NAME},
+        {L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR, L"AppID", RIVEPEEK_SURROGATE_APPID_STR},
+        {L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR, L"DisplayName", RIVEPEEK_FRIENDLY_NAME},
+        {L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR L"\\InprocServer32", nullptr, module},
+        {L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR L"\\InprocServer32", L"ThreadingModel", L"Apartment"},
+        // Associate the .riv extension with the preview-handler shell extension.
+        {L"Software\\Classes\\.riv", nullptr, L"RivePeek.Document"},
+        {L"Software\\Classes\\.riv", L"PerceivedType", L"image"},
+        {L"Software\\Classes\\.riv\\ShellEx\\" SHELLEX_PREVIEWHANDLER_STR, nullptr, RIVEPEEK_CLSID_STR},
+        {L"Software\\Classes\\RivePeek.Document", nullptr, L"Rive Animation"},
+        {L"Software\\Classes\\RivePeek.Document\\ShellEx\\" SHELLEX_PREVIEWHANDLER_STR, nullptr, RIVEPEEK_CLSID_STR},
+        // Approved preview-handlers list (the Shell's gatekeeper).
+        {L"Software\\Microsoft\\Windows\\CurrentVersion\\PreviewHandlers", RIVEPEEK_CLSID_STR, RIVEPEEK_FRIENDLY_NAME},
+    };
 
-    // 1) COM class.
-    setString(root, L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR, nullptr,
-              RIVEPEEK_FRIENDLY_NAME);
-    setString(root, L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR, L"AppID",
-              RIVEPEEK_SURROGATE_APPID_STR);
-    setString(root, L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR, L"DisplayName",
-              RIVEPEEK_FRIENDLY_NAME);
-    setString(root, L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR
-              L"\\InprocServer32", nullptr, module);
-    setString(root, L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR
-              L"\\InprocServer32", L"ThreadingModel", L"Apartment");
-
-    // 2) Associate the .riv extension with the preview-handler shell extension.
-    setString(root, L"Software\\Classes\\.riv", nullptr, L"RivePeek.Document");
-    setString(root, L"Software\\Classes\\.riv", L"PerceivedType", L"image");
-    setString(root, L"Software\\Classes\\.riv\\ShellEx\\"
-              SHELLEX_PREVIEWHANDLER_STR, nullptr, RIVEPEEK_CLSID_STR);
-    setString(root, L"Software\\Classes\\RivePeek.Document", nullptr,
-              L"Rive Animation");
-    setString(root, L"Software\\Classes\\RivePeek.Document\\ShellEx\\"
-              SHELLEX_PREVIEWHANDLER_STR, nullptr, RIVEPEEK_CLSID_STR);
-
-    // 3) Add to the approved preview-handlers list (gatekeeper).
-    setString(root, L"Software\\Microsoft\\Windows\\CurrentVersion\\PreviewHandlers",
-              RIVEPEEK_CLSID_STR, RIVEPEEK_FRIENDLY_NAME);
-
-    // Tell the shell that file associations changed.
+    HRESULT hr = S_OK;
+    for (const auto& e : entries) {
+        hr = setString(e.subkey, e.name, e.data);
+        if (FAILED(hr)) return hr;
+    }
     SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
     return S_OK;
 }
 
 STDAPI DllUnregisterServer() {
-    const HKEY root = HKEY_LOCAL_MACHINE;
-    RegDeleteTreeW(root, L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR);
-    RegDeleteTreeW(root, L"Software\\Classes\\.riv\\ShellEx\\"
+    RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Classes\\CLSID\\" RIVEPEEK_CLSID_STR);
+    RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Classes\\.riv\\ShellEx\\"
                    SHELLEX_PREVIEWHANDLER_STR);
-    RegDeleteTreeW(root, L"Software\\Classes\\RivePeek.Document");
+    RegDeleteTreeW(HKEY_CURRENT_USER, L"Software\\Classes\\RivePeek.Document");
 
     HKEY key;
-    if (RegOpenKeyExW(root,
+    if (RegOpenKeyExW(HKEY_CURRENT_USER,
                       L"Software\\Microsoft\\Windows\\CurrentVersion\\PreviewHandlers",
                       0, KEY_WRITE, &key) == ERROR_SUCCESS) {
         RegDeleteValueW(key, RIVEPEEK_CLSID_STR);

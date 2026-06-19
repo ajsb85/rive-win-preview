@@ -11,10 +11,12 @@ DEFINE_GUID(CLSID_RivePreviewHandler,
 // String forms used by the registrar (must match the GUID above).
 #define RIVEPEEK_CLSID_STR L"{7B2E9C14-5F3A-4D6B-9E21-3C8A7F0D5B42}"
 
-// Well-known 64-bit Preview Handler Surrogate Host (prevhost.exe). Setting this
-// as the AppID on our CLSID makes Windows load the handler in that isolated
-// process instead of explorer.exe.
-#define RIVEPEEK_SURROGATE_APPID_STR L"{6d2b345a-3aa5-4614-b7ce-69ae4657d472}"
+// Well-known native (64-bit) "Preview Handler Surrogate Host" — its AppID maps
+// to %SystemRoot%\System32\prevhost.exe via DllSurrogate. Setting this as our
+// CLSID's AppID makes Windows load the handler in that isolated process instead
+// of explorer.exe. (This is the value Microsoft's own RecipePreviewHandler
+// sample uses; the 32-bit/WOW64 surrogate is {534A1E02-D58F-44f0-B58B-36CBED287C7C}.)
+#define RIVEPEEK_SURROGATE_APPID_STR L"{6d2b5079-2f0b-48dd-ab7f-97cec514d30b}"
 
 // Standard Shell preview-handler shell-extension interface GUID. The .riv file
 // class points its ShellEx\<this> subkey at our CLSID.

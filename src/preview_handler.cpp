@@ -2,6 +2,7 @@
 #include "preview_handler.hpp"
 #include "guids.hpp"
 
+#include <shlwapi.h>   // QISearch / QITAB
 #include <d2d1helper.h>
 #include <new>
 
@@ -41,23 +42,17 @@ RivePreviewHandler::~RivePreviewHandler() {
 
 // ----------------------------------------------------------------- IUnknown
 IFACEMETHODIMP RivePreviewHandler::QueryInterface(REFIID riid, void** ppv) {
-    if (!ppv) return E_POINTER;
-    *ppv = nullptr;
-    if (riid == IID_IUnknown || riid == IID_IInitializeWithStream) {
-        *ppv = static_cast<IInitializeWithStream*>(this);
-    } else if (riid == IID_IPreviewHandler) {
-        *ppv = static_cast<IPreviewHandler*>(this);
-    } else if (riid == IID_IOleWindow) {
-        *ppv = static_cast<IOleWindow*>(this);
-    } else if (riid == IID_IPreviewHandlerVisuals) {
-        *ppv = static_cast<IPreviewHandlerVisuals*>(this);
-    } else if (riid == IID_IObjectWithSite) {
-        *ppv = static_cast<IObjectWithSite*>(this);
-    } else {
-        return E_NOINTERFACE;
-    }
-    AddRef();
-    return S_OK;
+    // QISearch resolves IUnknown via the first table entry and performs the
+    // correct pointer adjustment for each multiply-inherited interface.
+    static const QITAB qit[] = {
+        QITABENT(RivePreviewHandler, IInitializeWithStream),
+        QITABENT(RivePreviewHandler, IPreviewHandler),
+        QITABENT(RivePreviewHandler, IOleWindow),
+        QITABENT(RivePreviewHandler, IObjectWithSite),
+        QITABENT(RivePreviewHandler, IPreviewHandlerVisuals),
+        {0},
+    };
+    return QISearch(this, qit, riid, ppv);
 }
 
 IFACEMETHODIMP_(ULONG) RivePreviewHandler::AddRef() {
@@ -186,8 +181,9 @@ IFACEMETHODIMP RivePreviewHandler::TranslateAccelerator(MSG* pmsg) {
 
 // -------------------------------------------------------------- IOleWindow
 IFACEMETHODIMP RivePreviewHandler::GetWindow(HWND* phwnd) {
-    if (!phwnd) return E_POINTER;
-    *phwnd = m_hwnd;
+    if (!phwnd) return E_INVALIDARG;
+    // Per Microsoft's preview-handler sample, return the host parent window.
+    *phwnd = m_parent;
     return S_OK;
 }
 IFACEMETHODIMP RivePreviewHandler::ContextSensitiveHelp(BOOL) { return S_OK; }
