@@ -1,9 +1,9 @@
 @echo off
 REM ===========================================================================
-REM  Build rive_core.lib  -- the Rive C++ runtime. Text (WITH_RIVE_TEXT) is
-REM  enabled and links against HarfBuzz + SheenBidi (build\text_deps.lib, see
-REM  build_text_deps.bat). The layout / audio / scripting subsystems remain
-REM  #ifdef-guarded off, so they still need no third-party dependencies.
+REM  Build rive_core.lib  -- the Rive C++ runtime. Text (WITH_RIVE_TEXT) and
+REM  layout (WITH_RIVE_LAYOUT) are enabled and link against HarfBuzz + SheenBidi
+REM  (build\text_deps.lib) and Yoga (build\yoga.lib) respectively. The audio /
+REM  scripting subsystems remain #ifdef-guarded off.
 REM ===========================================================================
 setlocal ENABLEEXTENSIONS
 
@@ -17,8 +17,9 @@ if not exist "%OBJ%" mkdir "%OBJ%"
 
 set "HB=%ROOT%\third_party\harfbuzz"
 set "SB=%ROOT%\third_party\sheenbidi"
-set "DEFS=/D_RIVE_INTERNAL_ /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DWIN32 /D_WINDOWS /DWITH_RIVE_TEXT"
-set "CFLAGS=/nologo /c /MP /MT /O2 /EHsc /std:c++17 /GR- /bigobj /wd4146 /wd4996 /wd4244 /wd4267 /wd4018 /wd4305 /I "%RIVE%\include" /I "%HB%\src" /I "%SB%\Headers""
+set "YG=%ROOT%\third_party\yoga"
+set "DEFS=/D_RIVE_INTERNAL_ /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DWIN32 /D_WINDOWS /DWITH_RIVE_TEXT /DWITH_RIVE_LAYOUT /DYOGA_EXPORT="
+set "CFLAGS=/nologo /c /MP /MT /O2 /EHsc /std:c++17 /GR- /bigobj /wd4146 /wd4996 /wd4244 /wd4267 /wd4018 /wd4305 /I "%RIVE%\include" /I "%HB%\src" /I "%SB%\Headers" /I "%YG%""
 
 REM --- Collect every .cpp under the runtime src tree -------------------------
 set "LIST=%ROOT%\build\_core_sources.txt"

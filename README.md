@@ -41,6 +41,8 @@ first-frame thumbnail as their icon in the Explorer file grid.
   `IThumbnailProvider`.
 - 🔤 **Text rendering** — `WITH_RIVE_TEXT` enabled, shaping via HarfBuzz +
   SheenBidi (statically linked); text runs draw with the Direct2D backend.
+- 📐 **Flexbox layout** — `WITH_RIVE_LAYOUT` enabled, backed by Yoga, so
+  layout-driven artboards and responsive components position correctly.
 - 🛡️ **Process-isolated + fault-guarded** — runs in Windows' `prevhost.exe`
   surrogate, and load/advance/draw/teardown are wrapped in SEH so even a
   pathological file degrades to a blank preview instead of crashing the host.
@@ -91,9 +93,9 @@ directly on top of Direct2D + WIC:
 The same backend powers a **WIC bitmap render target** for headless thumbnail
 generation (no GPU or window required), which doubles as the test harness.
 
-The **core** Rive runtime is compiled with text enabled (`WITH_RIVE_TEXT`,
-linking HarfBuzz + SheenBidi); Yoga-based layout stays `#ifdef`-guarded off and
-compiles to no-ops here (see [Limitations](#limitations)).
+The **core** Rive runtime is compiled with text (`WITH_RIVE_TEXT`, linking
+HarfBuzz + SheenBidi) and layout (`WITH_RIVE_LAYOUT`, linking Yoga) enabled;
+audio and scripting stay `#ifdef`-guarded off (see [Limitations](#limitations)).
 
 ---
 
@@ -117,7 +119,8 @@ tools/
 build/                MSVC build scripts (no CMake required)
 install/              register.ps1 / unregister.ps1 / RivePeek.reg
 rive-runtime/         Rive C++ runtime (git submodule)
-third_party/          HarfBuzz + SheenBidi for text (gitignored; see get_text_deps.bat)
+third_party/          HarfBuzz + SheenBidi (text) and Yoga (layout), gitignored
+                      (see get_text_deps.bat / get_yoga.bat)
 ```
 
 ---
@@ -149,11 +152,13 @@ cd rive-peek
 build\build_all.bat
 ```
 
-`build_all.bat` first runs `get_text_deps.bat`, which clones the two text
-dependencies (HarfBuzz + SheenBidi, ~150 MB) into `third_party/` — needs `git`
-and network access on the first build. They are pinned to the same revisions
-Rive uses (`rive-app/harfbuzz @ rive_13.1.1`, `Tehreer/SheenBidi @ v2.6`) and
-are compiled into `text_deps.lib` by `build_text_deps.bat`.
+`build_all.bat` first runs `get_text_deps.bat` and `get_yoga.bat`, which clone
+the dependencies into `third_party/` (~160 MB) — needs `git` and network access
+on the first build. They are pinned to the revisions Rive uses
+(`rive-app/harfbuzz @ rive_13.1.1`, `Tehreer/SheenBidi @ v2.6`,
+`rive-app/yoga @ rive_changes_v2_0_1_2`) and are compiled into `text_deps.lib`
+and `yoga.lib`. **Yoga must be Rive's fork**, not upstream — the runtime stores
+`YGNode` by value, which upstream made opaque.
 
 This produces, in `build\bin\`:
 
@@ -165,10 +170,11 @@ This produces, in `build\bin\`:
 | `surrogate_test.exe` | activates the handler in `prevhost.exe` (like Explorer) |
 | `thumb_test.exe` | renders the `IThumbnailProvider` thumbnail to a PNG |
 
-Individual steps: `get_text_deps.bat` (clone HarfBuzz/SheenBidi),
-`build_text_deps.bat` (the `text_deps.lib`), `build_rive_core.bat` (the
-`rive_core.lib` static lib), `build_dll.bat`, `build_rivshot.bat`,
-`build_test.bat`, `build_surrogate_test.bat`, `build_thumb_test.bat`.
+Individual steps: `get_text_deps.bat` / `get_yoga.bat` (clone deps),
+`build_text_deps.bat` (`text_deps.lib`), `build_yoga.bat` (`yoga.lib`),
+`build_rive_core.bat` (the `rive_core.lib` static lib), `build_dll.bat`,
+`build_rivshot.bat`, `build_test.bat`, `build_surrogate_test.bat`,
+`build_thumb_test.bat`.
 
 > The build environment is configured by `build\env.bat`, which auto-detects the
 > newest MSVC toolset and Windows SDK via `vswhere`. It deliberately avoids
@@ -233,11 +239,10 @@ every required interface → `IInitializeWithStream::Initialize` → `SetWindow`
 
 ## Limitations
 
-- **Text** is supported (`WITH_RIVE_TEXT`, HarfBuzz + SheenBidi): text runs
-  shape and draw, including embedded and variable fonts. **Yoga layout**
-  (`WITH_RIVE_LAYOUT`) is still not compiled in, so layout-driven components
-  fall back to their authored size. Vector art, shapes, gradients, clipping,
-  raster images, image meshes, bones, constraints and state machines all render.
+- **Text** (`WITH_RIVE_TEXT`, HarfBuzz + SheenBidi) and **flexbox layout**
+  (`WITH_RIVE_LAYOUT`, Yoga) are both supported. Vector art, shapes, gradients,
+  clipping, raster images, image meshes, bones, constraints, state machines,
+  text and layout all render. **Audio** and **scripting** remain unsupported.
 - **Scripting** (Rive's experimental scripted objects) is not supported; such
   objects are skipped on import. One corpus file exercises a destruction-order
   bug in those objects — the SEH teardown guard contains it (blank preview)
@@ -275,7 +280,8 @@ every required interface → `IInitializeWithStream::Initialize` → `SetWindow`
   `Blend` effect (`ID2D1DeviceContext`), with a clean srcOver fallback
 - [x] **Text rendering** (`WITH_RIVE_TEXT` — HarfBuzz + SheenBidi, statically
   linked); shaping + variable/embedded fonts
-- [ ] Yoga-based layout (`WITH_RIVE_LAYOUT`)
+- [x] **Yoga-based layout** (`WITH_RIVE_LAYOUT` — rive-app/yoga, statically
+  linked); flexbox positioning for responsive artboards
 - [ ] Pause animation when the preview pane loses focus
 
 ---
