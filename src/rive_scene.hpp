@@ -25,6 +25,7 @@ namespace rivepeek {
 class RiveScene {
 public:
     RiveScene(ID2D1Factory* d2d, IWICImagingFactory* wic) : m_factory(d2d, wic) {}
+    ~RiveScene();
 
     // Parse the .riv bytes and instantiate the default artboard. Returns false
     // and sets error() on failure.
@@ -44,6 +45,11 @@ public:
     void draw(D2DRenderer& renderer, float frameW, float frameH);
 
 private:
+    // Release the artboard/scene under SEH. Some files (e.g. ones using Rive's
+    // experimental scripting objects) can fault in a destructor during teardown;
+    // guarding it keeps a bad file from crashing the host on the way out.
+    void teardown();
+
     D2DFactory m_factory;
     rive::rcp<rive::File> m_file;
     std::unique_ptr<rive::ArtboardInstance> m_artboard;

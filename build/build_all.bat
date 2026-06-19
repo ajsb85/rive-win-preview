@@ -2,6 +2,8 @@
 REM Build everything: the rive core lib, the COM handler DLL, and both test tools.
 setlocal
 set "ROOT=%~dp0.."
+call "%ROOT%\build\get_text_deps.bat"   || exit /b 1
+call "%ROOT%\build\build_text_deps.bat" || exit /b 1
 call "%ROOT%\build\build_rive_core.bat" || exit /b 1
 call "%ROOT%\build\build_dll.bat"       || exit /b 1
 call "%ROOT%\build\build_rivshot.bat"   || exit /b 1

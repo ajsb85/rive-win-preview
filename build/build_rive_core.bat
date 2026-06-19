@@ -1,9 +1,9 @@
 @echo off
 REM ===========================================================================
-REM  Build rive_core.lib  -- the Rive C++ runtime compiled WITHOUT the optional
-REM  text / layout / audio / scripting subsystems, so it needs no third-party
-REM  dependencies (HarfBuzz, SheenBidi, Yoga, libpng...). Those subsystems are
-REM  #ifdef-guarded in the runtime, so they compile to no-ops here.
+REM  Build rive_core.lib  -- the Rive C++ runtime. Text (WITH_RIVE_TEXT) is
+REM  enabled and links against HarfBuzz + SheenBidi (build\text_deps.lib, see
+REM  build_text_deps.bat). The layout / audio / scripting subsystems remain
+REM  #ifdef-guarded off, so they still need no third-party dependencies.
 REM ===========================================================================
 setlocal ENABLEEXTENSIONS
 
@@ -15,8 +15,10 @@ set "RIVE=%ROOT%\rive-runtime"
 set "OBJ=%ROOT%\build\obj\core"
 if not exist "%OBJ%" mkdir "%OBJ%"
 
-set "DEFS=/D_RIVE_INTERNAL_ /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DWIN32 /D_WINDOWS"
-set "CFLAGS=/nologo /c /MP /MT /O2 /EHsc /std:c++17 /GR- /wd4146 /wd4996 /wd4244 /wd4267 /wd4018 /wd4305 /I "%RIVE%\include""
+set "HB=%ROOT%\third_party\harfbuzz"
+set "SB=%ROOT%\third_party\sheenbidi"
+set "DEFS=/D_RIVE_INTERNAL_ /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /DWIN32 /D_WINDOWS /DWITH_RIVE_TEXT"
+set "CFLAGS=/nologo /c /MP /MT /O2 /EHsc /std:c++17 /GR- /bigobj /wd4146 /wd4996 /wd4244 /wd4267 /wd4018 /wd4305 /I "%RIVE%\include" /I "%HB%\src" /I "%SB%\Headers""
 
 REM --- Collect every .cpp under the runtime src tree -------------------------
 set "LIST=%ROOT%\build\_core_sources.txt"

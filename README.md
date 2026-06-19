@@ -39,10 +39,14 @@ first-frame thumbnail as their icon in the Explorer file grid.
   animation) plays live while the file is selected.
 - 🖼️ **Static thumbnails** — first-frame `.riv` thumbnails as grid icons via
   `IThumbnailProvider`.
-- 🛡️ **Process-isolated** — runs in Windows' `prevhost.exe` surrogate; a bad
-  file can't crash Explorer.
-- 🪶 **Dependency-free** — only the core Rive runtime is compiled; rendering is
-  pure Direct2D + WIC. The `RivePeek.dll` is self-contained (static CRT).
+- 🔤 **Text rendering** — `WITH_RIVE_TEXT` enabled, shaping via HarfBuzz +
+  SheenBidi (statically linked); text runs draw with the Direct2D backend.
+- 🛡️ **Process-isolated + fault-guarded** — runs in Windows' `prevhost.exe`
+  surrogate, and load/advance/draw/teardown are wrapped in SEH so even a
+  pathological file degrades to a blank preview instead of crashing the host.
+- 🪶 **Self-contained** — the core Rive runtime plus HarfBuzz/SheenBidi are
+  compiled in; rendering is pure Direct2D + WIC. `RivePeek.dll` links the static
+  CRT and needs no redistributables.
 - 🔒 **Per-user install** — registers under `HKCU`; no administrator rights.
 - 🧪 **Headless tooling** — `rivshot` renders any `.riv` to PNG and validates a
   whole corpus.
@@ -72,9 +76,9 @@ select a `.riv` file:
 
 ### The Direct2D backend
 
-Rather than compiling Rive's heavyweight GPU "Rive Renderer" (and its shader /
-HarfBuzz / Yoga / SheenBidi dependency chain), RivePeek implements Rive's two
-abstract embedding interfaces directly on top of Direct2D + WIC:
+Rather than compiling Rive's heavyweight GPU "Rive Renderer" (and its shader
+dependency chain), RivePeek implements Rive's two abstract embedding interfaces
+directly on top of Direct2D + WIC:
 
 - **`rive::Factory`** → `D2DFactory`: builds paths (`ID2D1PathGeometry`),
   solid/linear/radial brushes, and decodes images via **WIC**.
@@ -87,9 +91,9 @@ abstract embedding interfaces directly on top of Direct2D + WIC:
 The same backend powers a **WIC bitmap render target** for headless thumbnail
 generation (no GPU or window required), which doubles as the test harness.
 
-This means only the **core** Rive runtime is compiled — no external
-dependencies. Text and Yoga-based layout are `#ifdef`-guarded in the runtime and
-compile to no-ops here (see [Limitations](#limitations)).
+The **core** Rive runtime is compiled with text enabled (`WITH_RIVE_TEXT`,
+linking HarfBuzz + SheenBidi); Yoga-based layout stays `#ifdef`-guarded off and
+compiles to no-ops here (see [Limitations](#limitations)).
 
 ---
 
@@ -113,6 +117,7 @@ tools/
 build/                MSVC build scripts (no CMake required)
 install/              register.ps1 / unregister.ps1 / RivePeek.reg
 rive-runtime/         Rive C++ runtime (git submodule)
+third_party/          HarfBuzz + SheenBidi for text (gitignored; see get_text_deps.bat)
 ```
 
 ---
@@ -144,6 +149,12 @@ cd rive-peek
 build\build_all.bat
 ```
 
+`build_all.bat` first runs `get_text_deps.bat`, which clones the two text
+dependencies (HarfBuzz + SheenBidi, ~150 MB) into `third_party/` — needs `git`
+and network access on the first build. They are pinned to the same revisions
+Rive uses (`rive-app/harfbuzz @ rive_13.1.1`, `Tehreer/SheenBidi @ v2.6`) and
+are compiled into `text_deps.lib` by `build_text_deps.bat`.
+
 This produces, in `build\bin\`:
 
 | Artifact | Purpose |
@@ -154,9 +165,10 @@ This produces, in `build\bin\`:
 | `surrogate_test.exe` | activates the handler in `prevhost.exe` (like Explorer) |
 | `thumb_test.exe` | renders the `IThumbnailProvider` thumbnail to a PNG |
 
-Individual steps: `build_rive_core.bat` (the `rive_core.lib` static lib),
-`build_dll.bat`, `build_rivshot.bat`, `build_test.bat`,
-`build_surrogate_test.bat`, `build_thumb_test.bat`.
+Individual steps: `get_text_deps.bat` (clone HarfBuzz/SheenBidi),
+`build_text_deps.bat` (the `text_deps.lib`), `build_rive_core.bat` (the
+`rive_core.lib` static lib), `build_dll.bat`, `build_rivshot.bat`,
+`build_test.bat`, `build_surrogate_test.bat`, `build_thumb_test.bat`.
 
 > The build environment is configured by `build\env.bat`, which auto-detects the
 > newest MSVC toolset and Windows SDK via `vswhere`. It deliberately avoids
@@ -221,11 +233,15 @@ every required interface → `IInitializeWithStream::Initialize` → `SetWindow`
 
 ## Limitations
 
-- **Text** (`WITH_RIVE_TEXT`, HarfBuzz + SheenBidi) and **Yoga layout**
-  (`WITH_RIVE_LAYOUT`) are not compiled in, so text runs are not drawn and
-  layout-driven components fall back to their authored size. Vector art,
-  shapes, gradients, clipping, raster images, image meshes, bones, constraints
-  and state machines all render.
+- **Text** is supported (`WITH_RIVE_TEXT`, HarfBuzz + SheenBidi): text runs
+  shape and draw, including embedded and variable fonts. **Yoga layout**
+  (`WITH_RIVE_LAYOUT`) is still not compiled in, so layout-driven components
+  fall back to their authored size. Vector art, shapes, gradients, clipping,
+  raster images, image meshes, bones, constraints and state machines all render.
+- **Scripting** (Rive's experimental scripted objects) is not supported; such
+  objects are skipped on import. One corpus file exercises a destruction-order
+  bug in those objects — the SEH teardown guard contains it (blank preview)
+  rather than crashing.
 - **Blend modes** are fully supported (all 15 Rive modes via the Direct2D
   `Blend` effect). One caveat: a blended shape *inside a clip* composites against
   the pre-clip backdrop, since the clip is realized with a D2D layer whose
@@ -257,7 +273,8 @@ every required interface → `IInitializeWithStream::Initialize` → `SetWindow`
 - [ ] **Code-sign** the DLL and MSI (Authenticode) — the current installer is unsigned
 - [x] **Full blend-mode support** — all 15 Rive blend modes via the Direct2D
   `Blend` effect (`ID2D1DeviceContext`), with a clean srcOver fallback
-- [ ] Text rendering (`WITH_RIVE_TEXT` — HarfBuzz + SheenBidi)
+- [x] **Text rendering** (`WITH_RIVE_TEXT` — HarfBuzz + SheenBidi, statically
+  linked); shaping + variable/embedded fonts
 - [ ] Yoga-based layout (`WITH_RIVE_LAYOUT`)
 - [ ] Pause animation when the preview pane loses focus
 
