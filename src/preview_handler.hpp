@@ -10,7 +10,9 @@
 //   IPreviewHandlerVisuals — background/text/font from the host theme
 //   IObjectWithSite        — focus / accelerator plumbing
 #pragma once
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <ole2.h>          // IOleWindow
 #include <shobjidl.h>      // IPreviewHandler, IObjectWithSite, IInitializeWithStream

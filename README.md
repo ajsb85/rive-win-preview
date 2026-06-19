@@ -248,11 +248,13 @@ every required interface → `IInitializeWithStream::Initialize` → `SetWindow`
 
 ## Roadmap
 
+- [x] **WiX MSI installer** (`installer/` — dual-scope per-user / per-machine,
+  `WixUI_Advanced`); attached to each [release](https://github.com/ajsb85/rive-peek/releases)
+- [ ] **Code-sign** the DLL and MSI (Authenticode) — the current installer is unsigned
 - [ ] Text rendering (`WITH_RIVE_TEXT` — HarfBuzz + SheenBidi)
 - [ ] Yoga-based layout (`WITH_RIVE_LAYOUT`)
 - [ ] Full blend-mode support via Direct2D effects/`ID2D1DeviceContext`
 - [ ] Pause animation when the preview pane loses focus
-- [ ] A signed installer (MSIX / `.msi`)
 
 ---
 

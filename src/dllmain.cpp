@@ -3,7 +3,9 @@
 //
 // dllmain.cpp — COM server plumbing: module lifetime, class factory, the four
 // exported entry points, and (un)registration of the preview handler.
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <shlobj.h>     // SHChangeNotify
 #include <shlwapi.h>
